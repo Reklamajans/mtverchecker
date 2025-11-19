@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>💳 Happy Puan Kontrol Aracı</title>
+    <style>
+        body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; background-color: #f4f4f4; }
+        h2, h3 { color: #333; }
+        textarea { width: 100%; min-height: 150px; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; box-sizing: border-box;}
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .result-box { margin-top: 20px; padding: 15px; border: 2px solid #28a745; background-color: #e9f7ee; border-radius: 5px; }
+        .settings-panel { border: 1px dashed #6c757d; padding: 15px; margin-top: 10px; background-color: #fff; border-radius: 5px;}
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; }
+        input[type="text"] { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; box-sizing: border-box;}
+    </style>
+</head>
+<body>
+
+    <h2>💳 Happy.com.tr Kart Puan Kontrolü</h2>
+    
+    <button onclick="toggleSettings()">⚙️ Ayarları Aç / Kapat</button>
+
+    <div id="settingsPanel" class="settings-panel" style="display: none;">
+        <h3>API Ayarları (Oturum Bilgileri)</h3>
+        <p style="color: #6c757d; font-size: 0.9em;">Bu değerler tarayıcınızın Geliştirici Araçları'ndan (Network sekmesi) alınmalıdır. **Cookie** başlığı ve **csrfToken** POST verisi gereklidir.</p>
+        
+        <label for="cookieInput">Cookie Başlığı (Tam Değer):</label>
+        <textarea id="cookieInput" style="height: 80px;" placeholder="language=tr; currency=TRY; happyuyeol=1; ..."></textarea>
+        
+        <label for="csrfTokenInput">CSRF Token Değeri:</label>
+        <input type="text" id="csrfTokenInput" placeholder="9a4916d15120cb84ca6d599f60059e46a647577b89b701789da9d7199ca5ac68">
+        
+        <button onclick="saveSettings()">Ayarları Kaydet ve Kullan</button>
+        <p id="settingsStatus" style="margin-top: 5px;"></p>
+    </div>
+
+    <hr>
+    
+    <label for="cardInput">Kontrol Edilecek Kart Numaraları (Her satıra bir tane):</label>
+    <textarea id="cardInput" placeholder="Örn: 4540123456789012&#10;4540987654321098"></textarea>
+    
+    <button id="checkButton" onclick="checkCards()">Kartları Kontrol Et</button>
+
+    <div id="statusMessage"></div>
+
+    <div class="result-box">
+        <h3>🎉 Puanlı Kartlar </h3>
+        <ul id="robustList" style="list-style-type: none; padding-left: 0;">
+            </ul>
+        <p id="noResults" style="color: gray;">Kontrol tamamlandığında puanlı kartlar burada listelenecektir.</p>
+    </div>
+
+    <script>
+        // Render üzerinde /check_cards rotası aynı sunucuya işaret edecektir.
+        const API_ENDPOINT = '/check_cards'; 
+
+        // Varsayılan değerler (Lütfen ilk çalıştırmadan önce GÜNCELLEYİN!)
+        let currentCookie = "language=tr; currency=TRY; happyuyeol=1; cookieInformation=1; cid=...; PHPSESSID=..."; 
+        let currentCsrfToken = "9a4916d15120cb84ca6d599f60059e46a647577b89b701789da9d7199ca5ac68";
+
+        // Sayfa yüklendiğinde varsayılanları form alanlarına yaz
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('cookieInput').value = currentCookie;
+            document.getElementById('csrfTokenInput').value = currentCsrfToken;
+        });
+
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function saveSettings() {
+            const newCookie = document.getElementById('cookieInput').value.trim();
+            const newCsrfToken = document.getElementById('csrfTokenInput').value.trim();
+            const status = document.getElementById('settingsStatus');
+
+            if (!newCookie || !newCsrfToken) {
+                status.textContent = '⚠️ Cookie ve CSRF Token boş olamaz!';
+                status.style.color = 'red';
+                return;
+            }
+
+            currentCookie = newCookie;
+            currentCsrfToken = newCsrfToken;
+            
+            status.textContent = '✅ Ayarlar başarıyla kaydedildi!';
+            status.style.color = 'green';
+        }
+
+        async function checkCards() {
+            if (!currentCookie || !currentCsrfToken) {
+                document.getElementById('statusMessage').innerHTML = '<span class="error">Lütfen önce **Ayarlar** panelinden Cookie ve CSRF Token değerlerini girip kaydedin!</span>';
+                return;
+            }
+            
+            const cardInput = document.getElementById('cardInput').value;
+            const checkButton = document.getElementById('checkButton');
+            const statusMessage = document.getElementById('statusMessage');
+            const robustList = document.getElementById('robustList');
+            const noResults = document.getElementById('noResults');
+
+            robustList.innerHTML = '';
+            noResults.style.display = 'block';
+            statusMessage.innerHTML = 'Kontrol başlatılıyor... Lütfen bekleyin.';
+            checkButton.disabled = true;
+
+            const cards = cardInput.split('\n')
+                                   .map(line => line.trim())
+                                   .filter(line => line.length > 0);
+            
+            if (cards.length === 0) {
+                statusMessage.innerHTML = '<span class="error">Lütfen kontrol edilecek kart numaralarını girin.</span>';
+                checkButton.disabled = false;
+                return;
+            }
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-App-Cookie': currentCookie,       
+                        'X-App-Csrf': currentCsrfToken       
+                    },
+                    body: JSON.stringify({ cards: cards })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusMessage.innerHTML = `✅ Kontrol tamamlandı. Toplam **${result.totalChecked}** kart kontrol edildi.`;
+                    
+                    if (result.robustCards.length > 0) {
+                        noResults.style.display = 'none';
+                        result.robustCards.forEach(card => {
+                            const listItem = document.createElement('li');
+                            listItem.className = 'success';
+                            listItem.innerHTML = `💳 **${card.cardNumber}** (${card.expiry}) → **${card.amount} TL** Puan!`;
+                            robustList.appendChild(listItem);
+                        });
+                    } else {
+                        noResults.textContent = 'Kontrol edilen kartlar arasında puanlı kart bulunamadı.';
+                    }
+
+                } else {
+                    statusMessage.innerHTML = `<span class="error">Hata: Sunucu hatası (${response.status}). ${result.error || 'Bilinmeyen Hata.'}</span>`;
+                }
+
+            } catch (error) {
+                statusMessage.innerHTML = `<span class="error">Bağlantı Hatası: API sunucusuna ulaşılamıyor. (${error.message})</span>`;
+            } finally {
+                checkButton.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
