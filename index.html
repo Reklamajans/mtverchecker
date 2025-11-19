@@ -2,45 +2,146 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>MT VERİN LAN </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>METHOD VERİN CAKKKALLLAER</title>
     <style>
         /* Genel Stil ve Yerleşim */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 750px; margin: 40px auto; padding: 25px; background-color: #f8f9fa; color: #343a40; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-        h2 { text-align: center; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; }
-        h3 { color: #343a40; margin-top: 20px; }
-        hr { border: 0; height: 1px; background: #dee2e6; margin: 25px 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 750px; 
+            margin: 40px auto; 
+            padding: 25px; 
+            background-color: #f8f9fa; 
+            color: #343a40; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
+        }
+        h2 { 
+            text-align: center; 
+            color: #007bff; 
+            border-bottom: 2px solid #007bff; 
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+        }
+        h3 { 
+            color: #343a40; 
+            margin-top: 20px; 
+        }
+        hr { 
+            border: 0; 
+            height: 1px; 
+            background: #dee2e6; 
+            margin: 25px 0; 
+        }
 
         /* Form Elemanları */
-        label { display: block; margin-bottom: 5px; font-weight: 600; }
-        textarea, input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ced4da; border-radius: 5px; box-sizing: border-box; resize: vertical; font-size: 14px; }
-        textarea { min-height: 120px; }
+        label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: 600; 
+        }
+        textarea, input[type="text"] { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border: 1px solid #ced4da; 
+            border-radius: 5px; 
+            box-sizing: border-box; 
+            resize: vertical; 
+            font-size: 14px; 
+        }
+        textarea { 
+            min-height: 120px; 
+        }
 
         /* Butonlar */
-        button { padding: 10px 20px; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; transition: background-color 0.3s; font-weight: 600; }
-        #checkButton { background-color: #28a745; }
-        #checkButton:hover:not(:disabled) { background-color: #218838; }
-        #checkButton:disabled { background-color: #90ee90; cursor: not-allowed; }
-        #settingsPanel button { background-color: #007bff; }
-        #settingsPanel button:hover { background-color: #0056b3; }
+        button { 
+            padding: 10px 20px; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-right: 10px; 
+            transition: background-color 0.3s; 
+            font-weight: 600; 
+        }
+        #checkButton { 
+            background-color: #28a745; 
+        }
+        #checkButton:hover:not(:disabled) { 
+            background-color: #218838; 
+        }
+        #checkButton:disabled { 
+            background-color: #90ee90; 
+            cursor: not-allowed; 
+        }
+        #settingsPanel button { 
+            background-color: #007bff; 
+        }
+        #settingsPanel button:hover { 
+            background-color: #0056b3; 
+        }
         
         /* Ayarlar Paneli */
-        .settings-panel { border: 1px dashed #adb5bd; padding: 20px; margin-top: 15px; background-color: #e9ecef; border-radius: 5px; }
+        .settings-panel { 
+            border: 1px dashed #adb5bd; 
+            padding: 20px; 
+            margin-top: 15px; 
+            background-color: #e9ecef; 
+            border-radius: 5px; 
+        }
 
         /* Sonuç Kutucuğu */
-        .result-box { margin-top: 30px; padding: 20px; border: 2px solid #ffc107; background-color: #fff3cd; border-radius: 5px; }
-        #robustList { list-style-type: none; padding-left: 0; }
-        #robustList li { padding: 8px 0; border-bottom: 1px dashed #ffc107; }
-        #robustList li:last-child { border-bottom: none; }
+        .result-box { 
+            margin-top: 30px; 
+            padding: 20px; 
+            border: 2px solid #ffc107; 
+            background-color: #fff3cd; 
+            border-radius: 5px; 
+        }
+        #robustList { 
+            list-style-type: none; 
+            padding-left: 0; 
+        }
+        #robustList li { 
+            padding: 8px 0; 
+            border-bottom: 1px dashed #ffc107; 
+            font-size: 1.1em;
+        }
+        #robustList li:last-child { 
+            border-bottom: none; 
+        }
 
         /* Durum Mesajları */
-        .success { color: #155724; font-weight: bold; }
-        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 5px; margin-top: 10px;}
-        #settingsStatus { font-weight: 600; margin-top: 10px;}
+        .success { 
+            color: #155724; 
+            font-weight: bold; 
+        }
+        .error { 
+            color: #721c24; 
+            background-color: #f8d7da; 
+            border: 1px solid #f5c6cb; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-top: 10px;
+        }
+        #settingsStatus { 
+            font-weight: 600; 
+            margin-top: 10px;
+        }
+        #statusMessage {
+            font-weight: 600;
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 5px;
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
     </style>
 </head>
 <body>
 
-    <h2>Puan Kontrol Aracı</h2>
+    <h2>1 SİKE 5 AM</h2>
     
     <button onclick="toggleSettings()" style="background-color: #6c757d;">⚙️ Ayarları Aç / Kapat</button>
 
@@ -65,7 +166,7 @@
     
     <button id="checkButton" onclick="checkCards()">Kontrolü Başlat</button>
 
-    <div id="statusMessage"></div>
+    <div id="statusMessage">Kontrol için hazır. Lütfen kart numaralarını giriniz.</div>
 
     <div class="result-box">
         <h3>🎉 Puanlı Kartlar </h3>
@@ -152,7 +253,7 @@
 
             robustList.innerHTML = '';
             noResults.style.display = 'block';
-            statusMessage.innerHTML = 'Kontrol başlatılıyor... Lütfen bekleyin.';
+            statusMessage.innerHTML = 'Kontrol **başlatıldı**... Sunucudan yanıt bekleniyor.';
             checkButton.disabled = true;
 
             const cards = cardInput.split('\n')
@@ -164,6 +265,10 @@
                 checkButton.disabled = false;
                 return;
             }
+
+            const totalCards = cards.length;
+            let cardsProcessed = 0;
+            let foundCardsCount = 0;
 
             try {
                 const response = await fetch(API_ENDPOINT, {
@@ -179,18 +284,35 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    statusMessage.innerHTML = `✅ Kontrol tamamlandı. Toplam **${result.totalChecked}** kart kontrol edildi.`;
                     
-                    if (result.robustCards.length > 0) {
-                        noResults.style.display = 'none';
-                        result.robustCards.forEach(card => {
-                            const listItem = document.createElement('li');
-                            listItem.className = 'success';
-                            listItem.innerHTML = `💳 **${card.cardNumber}** (${card.expiry}) → **${card.amount} TL** Puan!`;
-                            robustList.appendChild(listItem);
-                        });
-                    } else {
+                    const robustCards = result.robustCards || [];
+                    
+                    // Akış Efekti: Gelen puanlı kartları sırayla listeye ekle ve durumu güncelle
+                    for (const cardData of robustCards) {
+                        cardsProcessed++;
+                        foundCardsCount++;
+
+                        const listItem = document.createElement('li');
+                        listItem.className = 'success';
+                        listItem.innerHTML = `💳 **${cardData.cardNumber}** (Bitiş: ${cardData.expiry}) → **${cardData.amount} TL** Puan!`;
+                        robustList.appendChild(listItem);
+                        
+                        // Durum mesajını akış sırasında güncelle
+                        statusMessage.innerHTML = `✅ **${foundCardsCount}** puanlı kart bulundu ve listeye eklendi. Kontrol devam ediyor...`;
+                        
+                        // Kısa bir bekleme, listenin anlık güncelleniyormuş gibi görünmesini sağlar.
+                        await new Promise(r => setTimeout(r, 100)); 
+                    }
+                    
+                    // İşlenmesi gereken tüm kartlar kontrol edildi varsayılır (Arka uç tek seferde kontrolü bitirir)
+                    statusMessage.innerHTML = `✅ **Tüm kartların** (${totalCards} adet) kontrolü tamamlandı! Toplam **${foundCardsCount}** puanlı kart bulundu.`;
+
+
+                    if (robustCards.length === 0) {
                         noResults.textContent = 'Kontrol edilen kartlar arasında puanlı kart bulunamadı.';
+                        noResults.style.display = 'block';
+                    } else {
+                        noResults.style.display = 'none';
                     }
 
                 } else {
