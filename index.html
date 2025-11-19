@@ -2,30 +2,51 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>MT VERİN LAN</title>
+    <title>💳 Happy Puan Kontrol Aracı</title>
     <style>
-        body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; background-color: #f4f4f4; }
-        h2, h3 { color: #333; }
-        textarea { width: 100%; min-height: 150px; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; box-sizing: border-box;}
-        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        .result-box { margin-top: 20px; padding: 15px; border: 2px solid #28a745; background-color: #e9f7ee; border-radius: 5px; }
-        .settings-panel { border: 1px dashed #6c757d; padding: 15px; margin-top: 10px; background-color: #fff; border-radius: 5px;}
-        .success { color: #28a745; font-weight: bold; }
-        .error { color: #dc3545; }
-        input[type="text"] { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; box-sizing: border-box;}
+        /* Genel Stil ve Yerleşim */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 750px; margin: 40px auto; padding: 25px; background-color: #f8f9fa; color: #343a40; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h2 { text-align: center; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; }
+        h3 { color: #343a40; margin-top: 20px; }
+        hr { border: 0; height: 1px; background: #dee2e6; margin: 25px 0; }
+
+        /* Form Elemanları */
+        label { display: block; margin-bottom: 5px; font-weight: 600; }
+        textarea, input[type="text"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ced4da; border-radius: 5px; box-sizing: border-box; resize: vertical; font-size: 14px; }
+        textarea { min-height: 120px; }
+
+        /* Butonlar */
+        button { padding: 10px 20px; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; transition: background-color 0.3s; font-weight: 600; }
+        #checkButton { background-color: #28a745; }
+        #checkButton:hover:not(:disabled) { background-color: #218838; }
+        #checkButton:disabled { background-color: #90ee90; cursor: not-allowed; }
+        #settingsPanel button { background-color: #007bff; }
+        #settingsPanel button:hover { background-color: #0056b3; }
+        
+        /* Ayarlar Paneli */
+        .settings-panel { border: 1px dashed #adb5bd; padding: 20px; margin-top: 15px; background-color: #e9ecef; border-radius: 5px; }
+
+        /* Sonuç Kutucuğu */
+        .result-box { margin-top: 30px; padding: 20px; border: 2px solid #ffc107; background-color: #fff3cd; border-radius: 5px; }
+        #robustList { list-style-type: none; padding-left: 0; }
+        #robustList li { padding: 8px 0; border-bottom: 1px dashed #ffc107; }
+        #robustList li:last-child { border-bottom: none; }
+
+        /* Durum Mesajları */
+        .success { color: #155724; font-weight: bold; }
+        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 5px; margin-top: 10px;}
+        #settingsStatus { font-weight: 600; margin-top: 10px;}
     </style>
 </head>
 <body>
 
-    <h2>💳Kart Puan Kontrolü</h2>
+    <h2>💳 Happy Puan Kontrol Aracı</h2>
     
-    <button onclick="toggleSettings()">⚙️ Ayarları Aç / Kapat</button>
+    <button onclick="toggleSettings()" style="background-color: #6c757d;">⚙️ Ayarları Aç / Kapat</button>
 
     <div id="settingsPanel" class="settings-panel" style="display: none;">
-        <h3>API Ayarları (Oturum Bilgileri)</h3>
-        <p style="color: #6c757d; font-size: 0.9em;">Bu değerler tarayıcınızın Geliştirici Araçları'ndan (Network sekmesi) alınmalıdır. **Cookie** başlığı ve **csrfToken** POST verisi gereklidir.</p>
+        <h3>API Ayarları (Kalıcı Oturum Bilgileri)</h3>
+        <p style="color: #6c757d; font-size: 0.9em;">Token ve Cookie bilgileri, sayfa yenilense bile tarayıcınızda kalıcı olarak saklanacaktır.</p>
         
         <label for="cookieInput">Cookie Başlığı (Tam Değer):</label>
         <textarea id="cookieInput" style="height: 80px;" placeholder="language=tr; currency=TRY; happyuyeol=1; ..."></textarea>
@@ -42,36 +63,51 @@
     <label for="cardInput">Kontrol Edilecek Kart Numaraları (Her satıra bir tane):</label>
     <textarea id="cardInput" placeholder="Örn: 4540123456789012&#10;4540987654321098"></textarea>
     
-    <button id="checkButton" onclick="checkCards()">Kartları Kontrol Et</button>
+    <button id="checkButton" onclick="checkCards()">Kontrolü Başlat</button>
 
     <div id="statusMessage"></div>
 
     <div class="result-box">
-        <h3>🎉 Puanlı Kartlar </h3>
+        <h3>🎉 Puanlı Kartlar (Robust)</h3>
         <ul id="robustList" style="list-style-type: none; padding-left: 0;">
             </ul>
         <p id="noResults" style="color: gray;">Kontrol tamamlandığında puanlı kartlar burada listelenecektir.</p>
     </div>
 
     <script>
-        // Render üzerinde /check_cards rotası aynı sunucuya işaret edecektir.
         const API_ENDPOINT = '/check_cards'; 
 
-        // Varsayılan değerler (Lütfen ilk çalıştırmadan önce GÜNCELLEYİN!)
-        let currentCookie = "language=tr; currency=TRY; happyuyeol=1; cookieInformation=1; cid=...; PHPSESSID=..."; 
-        let currentCsrfToken = "9a4916d15120cb84ca6d599f60059e46a647577b89b701789da9d7199ca5ac68";
+        // Başlangıçta global değişkenleri boş bırakıyoruz. Değerleri localStorage'dan yüklenecek.
+        let currentCookie = ""; 
+        let currentCsrfToken = "";
 
-        // Sayfa yüklendiğinde varsayılanları form alanlarına yaz
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('cookieInput').value = currentCookie;
-            document.getElementById('csrfTokenInput').value = currentCsrfToken;
-        });
+        // --- Ayarları localStorage'dan Yükle ---
+        function loadSettingsFromStorage() {
+            const savedCookie = localStorage.getItem('appCookie');
+            const savedCsrfToken = localStorage.getItem('appCsrfToken');
 
-        function toggleSettings() {
-            const panel = document.getElementById('settingsPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            // Kayıtlı değer varsa kullan, yoksa başlangıç placeholder'ını kullan
+            if (savedCookie) {
+                currentCookie = savedCookie;
+                document.getElementById('cookieInput').value = savedCookie;
+            } else {
+                 document.getElementById('cookieInput').value = "language=tr; currency=TRY; happyuyeol=1; ...";
+            }
+            
+            if (savedCsrfToken) {
+                currentCsrfToken = savedCsrfToken;
+                document.getElementById('csrfTokenInput').value = savedCsrfToken;
+            } else {
+                document.getElementById('csrfTokenInput').value = "9a4916d15120cb84ca6d599f60059e46a647577b89b701789da9d7199ca5ac68";
+            }
         }
 
+
+        // Sayfa yüklendiğinde ayarları yükle
+        document.addEventListener('DOMContentLoaded', loadSettingsFromStorage);
+
+
+        // --- Ayarları Kaydet ve Kalıcı Hale Getir ---
         function saveSettings() {
             const newCookie = document.getElementById('cookieInput').value.trim();
             const newCsrfToken = document.getElementById('csrfTokenInput').value.trim();
@@ -83,13 +119,25 @@
                 return;
             }
 
+            // Global değişkenleri güncelle
             currentCookie = newCookie;
             currentCsrfToken = newCsrfToken;
+            
+            // Verileri localStorage'a KAYDET (Kalıcılık sağlanır)
+            localStorage.setItem('appCookie', newCookie);
+            localStorage.setItem('appCsrfToken', newCsrfToken);
             
             status.textContent = '✅ Ayarlar başarıyla kaydedildi!';
             status.style.color = 'green';
         }
 
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+
+        // --- Kart Kontrol Fonksiyonu ---
         async function checkCards() {
             if (!currentCookie || !currentCsrfToken) {
                 document.getElementById('statusMessage').innerHTML = '<span class="error">Lütfen önce **Ayarlar** panelinden Cookie ve CSRF Token değerlerini girip kaydedin!</span>';
