@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>METHOD VERİN CAKKKALLLAER</title>
+    <title>mt ver</title>
     <style>
         /* Genel Stil ve Yerleşim */
         body { 
@@ -24,7 +24,7 @@
             margin-bottom: 20px; 
         }
         h3 { 
-            color: #343a40; 
+            color: #343a30; 
             margin-top: 20px; 
         }
         hr { 
@@ -141,7 +141,7 @@
 </head>
 <body>
 
-    <h2>1 SİKE 5 AM</h2>
+    <h2>mt verin @novelord</h2>
     
     <button onclick="toggleSettings()" style="background-color: #6c757d;">⚙️ Ayarları Aç / Kapat</button>
 
@@ -176,9 +176,9 @@
     </div>
 
     <script>
-        const API_ENDPOINT = '/check_cards'; 
+        // Yeni tekil kart kontrol rotasını kullanıyoruz
+        const API_ENDPOINT = '/check_card'; 
 
-        // Başlangıçta global değişkenleri boş bırakıyoruz. Değerleri localStorage'dan yüklenecek.
         let currentCookie = ""; 
         let currentCsrfToken = "";
 
@@ -187,7 +187,6 @@
             const savedCookie = localStorage.getItem('appCookie');
             const savedCsrfToken = localStorage.getItem('appCsrfToken');
 
-            // Kayıtlı değer varsa kullan, yoksa başlangıç placeholder'ını kullan
             if (savedCookie) {
                 currentCookie = savedCookie;
                 document.getElementById('cookieInput').value = savedCookie;
@@ -203,10 +202,7 @@
             }
         }
 
-
-        // Sayfa yüklendiğinde ayarları yükle
         document.addEventListener('DOMContentLoaded', loadSettingsFromStorage);
-
 
         // --- Ayarları Kaydet ve Kalıcı Hale Getir ---
         function saveSettings() {
@@ -220,11 +216,9 @@
                 return;
             }
 
-            // Global değişkenleri güncelle
             currentCookie = newCookie;
             currentCsrfToken = newCsrfToken;
             
-            // Verileri localStorage'a KAYDET (Kalıcılık sağlanır)
             localStorage.setItem('appCookie', newCookie);
             localStorage.setItem('appCsrfToken', newCsrfToken);
             
@@ -238,7 +232,7 @@
         }
 
 
-        // --- Kart Kontrol Fonksiyonu ---
+        // --- YENİ KART KONTROL FONKSİYONU (Anında Güncelleme) ---
         async function checkCards() {
             if (!currentCookie || !currentCsrfToken) {
                 document.getElementById('statusMessage').innerHTML = '<span class="error">Lütfen önce **Ayarlar** panelinden Cookie ve CSRF Token değerlerini girip kaydedin!</span>';
@@ -253,7 +247,6 @@
 
             robustList.innerHTML = '';
             noResults.style.display = 'block';
-            statusMessage.innerHTML = 'Kontrol **başlatıldı**... Sunucudan yanıt bekleniyor.';
             checkButton.disabled = true;
 
             const cards = cardInput.split('\n')
@@ -271,56 +264,53 @@
             let foundCardsCount = 0;
 
             try {
-                const response = await fetch(API_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-App-Cookie': currentCookie,       
-                        'X-App-Csrf': currentCsrfToken       
-                    },
-                    body: JSON.stringify({ cards: cards })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
+                // KARTLARI TEK TEK DÖNGÜYE ALIYORUZ ve her biri için API isteği gönderiyoruz.
+                for (const card of cards) {
+                    cardsProcessed++;
                     
-                    const robustCards = result.robustCards || [];
-                    
-                    // Akış Efekti: Gelen puanlı kartları sırayla listeye ekle ve durumu güncelle
-                    for (const cardData of robustCards) {
-                        cardsProcessed++;
+                    // Durum mesajını her kart için güncelle
+                    statusMessage.innerHTML = `💳 Kontrol ediliyor: **${card.substring(0, 4)}...** (${cardsProcessed}/${totalCards})`;
+
+                    const response = await fetch(API_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-App-Cookie': currentCookie,       
+                            'X-App-Csrf': currentCsrfToken       
+                        },
+                        // Arka uca sadece tek bir kart gönder
+                        body: JSON.stringify({ card: card })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
                         foundCardsCount++;
-
+                        
+                        // ANINDA LİSTEYE EKLE
                         const listItem = document.createElement('li');
                         listItem.className = 'success';
-                        listItem.innerHTML = `💳 **${cardData.cardNumber}** (Bitiş: ${cardData.expiry}) → **${cardData.amount} TL** Puan!`;
+                        listItem.innerHTML = `💳 **${result.cardNumber}** (Bitiş: ${result.expiry}) → **${result.amount} TL** Puan!`;
                         robustList.appendChild(listItem);
                         
-                        // Durum mesajını akış sırasında güncelle
-                        statusMessage.innerHTML = `✅ **${foundCardsCount}** puanlı kart bulundu ve listeye eklendi. Kontrol devam ediyor...`;
-                        
-                        // Kısa bir bekleme, listenin anlık güncelleniyormuş gibi görünmesini sağlar.
-                        await new Promise(r => setTimeout(r, 100)); 
+                        noResults.style.display = 'none'; 
+                    } else if (!response.ok) {
+                        console.error(`API Error for card ${card}: ${result.error || 'Bilinmeyen Hata.'}`);
                     }
-                    
-                    // İşlenmesi gereken tüm kartlar kontrol edildi varsayılır (Arka uç tek seferde kontrolü bitirir)
-                    statusMessage.innerHTML = `✅ **Tüm kartların** (${totalCards} adet) kontrolü tamamlandı! Toplam **${foundCardsCount}** puanlı kart bulundu.`;
-
-
-                    if (robustCards.length === 0) {
-                        noResults.textContent = 'Kontrol edilen kartlar arasında puanlı kart bulunamadı.';
-                        noResults.style.display = 'block';
-                    } else {
-                        noResults.style.display = 'none';
-                    }
-
+                }
+                
+                // --- KONTROL BİTTİ ---
+                
+                if (foundCardsCount > 0) {
+                    statusMessage.innerHTML = `✅ **${totalCards}** kartın kontrolü tamamlandı. Toplam **${foundCardsCount}** puanlı kart bulundu!`;
                 } else {
-                    statusMessage.innerHTML = `<span class="error">Hata: Sunucu hatası (${response.status}). ${result.error || 'Bilinmeyen Hata.'}</span>`;
+                     statusMessage.innerHTML = `✅ **${totalCards}** kartın kontrolü tamamlandı. Puanlı kart bulunamadı.`;
+                     noResults.textContent = 'Kontrol edilen kartlar arasında puanlı kart bulunamadı.';
+                     noResults.style.display = 'block';
                 }
 
             } catch (error) {
-                statusMessage.innerHTML = `<span class="error">Bağlantı Hatası: API sunucusuna ulaşılamıyor. (${error.message})</span>`;
+                statusMessage.innerHTML = `<span class="error">Bağlantı Hatası: Sunucuya ulaşılamıyor. (${error.message})</span>`;
             } finally {
                 checkButton.disabled = false;
             }
