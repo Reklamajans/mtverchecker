@@ -18,13 +18,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /**
- * Tek bir kartı kontrol eder (12 aydan 1 aya doğru) ve bulunan ilk puanı döner.
+ * Tek bir kartı kontrol eder. Bu sefer 12 ayın tamamı PARALEL olarak kontrol edilir.
  */
 async function checkSingleCard(cardNumber, headers, csrfToken) {
-    // Kartı 12. aydan 1. aya doğru döngüye al
-    for (let m = 12; m >= 1; m--) {
-        const month = m.toString().padStart(2, '0');
-        
+    
+    // 12 ay için tüm Promise'leri (İstekleri) hazırlarız
+    const monthPromises = [];
+    const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+
+    for (const month of months) {
         const data = {
             "banka": "akbank",
             "cardtype": "2",
@@ -38,22 +40,19 @@ async function checkSingleCard(cardNumber, headers, csrfToken) {
             "useAmountDecimal": "",
             "csrfToken": csrfToken 
         };
-
         const body = new URLSearchParams(data).toString();
 
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: headers,
-                body: body
-            });
-
-            const text = await response.text();
-            
+        const promise = fetch(API_URL, {
+            method: 'POST',
+            headers: headers,
+            body: body
+        })
+        .then(res => res.text()) // Yanıtı metin olarak al
+        .then(text => {
             try {
                 const result = JSON.parse(text);
+                // Puan varsa sonucu döndür
                 if (result && typeof result.amount === 'string' && parseFloat(result.amount) > 0) {
-                    // Puan bulundu! Anında sonucu dön ve döngüyü sonlandır.
                     return { 
                         success: true, 
                         cardNumber: cardNumber,
@@ -62,18 +61,29 @@ async function checkSingleCard(cardNumber, headers, csrfToken) {
                     };
                 }
             } catch (jsonError) {
-                // JSON parse hatası (genellikle puan yok demektir)
+                // JSON hatası veya puan yok
             }
-        } catch (fetchError) {
-            // Network hatası
-            return { 
-                success: false, 
-                error: `Bağlantı hatası: ${fetchError.message}`
-            };
-        }
+            return null; // Puan yoksa null döndür
+        })
+        .catch(fetchError => {
+            // console.error(`Fetch error for month ${month}: ${fetchError.message}`); // Hata logunu kapatıyoruz
+            return null;
+        });
+
+        monthPromises.push(promise);
     }
     
-    // 12 ay denendi ve puan bulunamadı.
+    // Bütün 12 ayın isteklerinin PARALEL olarak tamamlanmasını bekle
+    const results = await Promise.all(monthPromises);
+    
+    // Sonuçlar arasından puanı olan ilk kartı bul ve dön
+    const robustResult = results.find(result => result && result.success);
+
+    if (robustResult) {
+        return robustResult;
+    }
+    
+    // Puan bulunamadı.
     return { success: false, cardNumber: cardNumber, error: "Puan bulunamadı." };
 }
 
