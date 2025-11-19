@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mt ver</title>
+    <title>mt paslayın artık</title>
     <style>
         /* Genel Stil ve Yerleşim */
         body { 
@@ -12,7 +12,7 @@
             margin: 40px auto; 
             padding: 25px; 
             background-color: #f8f9fa; 
-            color: #343a40; 
+            color: #343a30; 
             border-radius: 10px; 
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
         }
@@ -141,7 +141,7 @@
 </head>
 <body>
 
-    <h2>mt verin @novelord</h2>
+    <h2>@novelord 0044</h2>
     
     <button onclick="toggleSettings()" style="background-color: #6c757d;">⚙️ Ayarları Aç / Kapat</button>
 
@@ -161,7 +161,7 @@
 
     <hr>
     
-    <label for="cardInput">Kontrol Edilecek Kart Numaraları (Her satıra bir tane):</label>
+    <label for="cardInput">Kontrol Edilecek Kart Numaraları :</label>
     <textarea id="cardInput" placeholder="Örn: 4540123456789012&#10;4540987654321098"></textarea>
     
     <button id="checkButton" onclick="checkCards()">Kontrolü Başlat</button>
@@ -169,7 +169,7 @@
     <div id="statusMessage">Kontrol için hazır. Lütfen kart numaralarını giriniz.</div>
 
     <div class="result-box">
-        <h3>🎉 Puanlı Kartlar </h3>
+        <h3>🎉 Puanlı Kartlar (Anında Güncellenir)</h3>
         <ul id="robustList" style="list-style-type: none; padding-left: 0;">
             </ul>
         <p id="noResults" style="color: gray;">Kontrol tamamlandığında puanlı kartlar burada listelenecektir.</p>
@@ -232,7 +232,33 @@
         }
 
 
-        // --- YENİ KART KONTROL FONKSİYONU (Anında Güncelleme) ---
+        // --- KONTROL FONKSİYONLARI ---
+
+        // Yüksek hızlı paralel işlem fonksiyonu
+        async function runParallel(tasks, limit) {
+            const activePromises = [];
+            const results = [];
+            let taskIndex = 0;
+
+            const worker = async () => {
+                while (taskIndex < tasks.length) {
+                    const currentTaskIndex = taskIndex++;
+                    const task = tasks[currentTaskIndex]; 
+                    
+                    const result = await task();
+                    results.push(result);
+                }
+            };
+
+            for (let i = 0; i < limit && i < tasks.length; i++) {
+                activePromises.push(worker());
+            }
+
+            await Promise.all(activePromises);
+            return results;
+        }
+
+        // Ana Kart Kontrol Fonksiyonu
         async function checkCards() {
             if (!currentCookie || !currentCsrfToken) {
                 document.getElementById('statusMessage').innerHTML = '<span class="error">Lütfen önce **Ayarlar** panelinden Cookie ve CSRF Token değerlerini girip kaydedin!</span>';
@@ -262,14 +288,16 @@
             const totalCards = cards.length;
             let cardsProcessed = 0;
             let foundCardsCount = 0;
+            
+            // 🔥 PARALEL İŞLEM SINIRI 🔥
+            const concurrencyLimit = 20; 
 
             try {
-                // KARTLARI TEK TEK DÖNGÜYE ALIYORUZ ve her biri için API isteği gönderiyoruz.
-                for (const card of cards) {
-                    cardsProcessed++;
+                // Kontrol edilecek tüm kartlar için Promise listesi oluşturulur (fonksiyon olarak)
+                const cardPromises = cards.map(card => async () => {
                     
-                    // Durum mesajını her kart için güncelle
-                    statusMessage.innerHTML = `💳 Kontrol ediliyor: **${card.substring(0, 4)}...** (${cardsProcessed}/${totalCards})`;
+                    // Durum Mesajını Güncelle (Bu mesajlar, paralel işlemler bittikçe rastgele sırada güncellenir)
+                    statusMessage.innerHTML = `💳 Kontrol ediliyor: **${cardsProcessed + 1}/${totalCards}**...`;
 
                     const response = await fetch(API_ENDPOINT, {
                         method: 'POST',
@@ -278,11 +306,11 @@
                             'X-App-Cookie': currentCookie,       
                             'X-App-Csrf': currentCsrfToken       
                         },
-                        // Arka uca sadece tek bir kart gönder
                         body: JSON.stringify({ card: card })
                     });
 
                     const result = await response.json();
+                    cardsProcessed++; // İşlenen kart sayısını artır
 
                     if (response.ok && result.success) {
                         foundCardsCount++;
@@ -294,11 +322,17 @@
                         robustList.appendChild(listItem);
                         
                         noResults.style.display = 'none'; 
-                    } else if (!response.ok) {
-                        console.error(`API Error for card ${card}: ${result.error || 'Bilinmeyen Hata.'}`);
                     }
-                }
+                    
+                    // İşlem biterken son durumu güncelle
+                    statusMessage.innerHTML = `💳 Kontrol ediliyor: **${cardsProcessed}/${totalCards}** tamamlandı.`;
+                    
+                    return result; 
+                });
                 
+                // --- PARALEL İŞLEM BAŞLIYOR ---
+                await runParallel(cardPromises, concurrencyLimit);
+
                 // --- KONTROL BİTTİ ---
                 
                 if (foundCardsCount > 0) {
