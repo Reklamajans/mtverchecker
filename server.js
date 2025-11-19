@@ -81,7 +81,8 @@ async function checkSingleCard(cardNumber, headers, csrfToken) {
  * Express POST Rotası: Sadece TEK BİR KART kontrolünü yapar.
  */
 app.post('/check_card', async (req, res) => {
-    const cardNumber = req.body.card; // Ön yüzden tekil kartı yakala
+    // Ön yüzden tekil kartı yakala (Rota: /check_card)
+    const cardNumber = req.body.card; 
     
     const cookieHeader = req.header('x-app-cookie');
     const csrfTokenValue = req.header('x-app-csrf');
